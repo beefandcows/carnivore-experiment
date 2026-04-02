@@ -1,4 +1,4 @@
-import { put, list } from '@vercel/blob'
+import { put, head } from '@vercel/blob'
 import { NextResponse } from 'next/server'
 
 const BLOB_KEY = 'carnivore-entries.json'
@@ -6,15 +6,20 @@ const ADMIN_PASSWORD = 'carnivore30'
 
 async function getEntries() {
   try {
-    const { blobs } = await list()
-    const blob = blobs.find(b => b.pathname === BLOB_KEY)
-    if (!blob) return { startWeight: 251.4, entries: [] }
-    const res = await fetch(blob.downloadUrl, { cache: 'no-store' })
+    const blobInfo = await head(BLOB_KEY)
+    const res = await fetch(blobInfo.downloadUrl, { cache: 'no-store' })
     return await res.json()
   } catch (e) {
-    console.error('getEntries error:', e)
     return { startWeight: 251.4, entries: [] }
   }
+}
+
+async function saveData(data) {
+  await put(BLOB_KEY, JSON.stringify(data), { 
+    access: 'private', 
+    addRandomSuffix: false,
+    allowOverwrite: true
+  })
 }
 
 export async function GET() {
@@ -37,26 +42,21 @@ export async function POST(request) {
       const entries = current.entries.filter(e => e.date !== entry.date)
       entries.push(entry)
       entries.sort((a, b) => a.date.localeCompare(b.date))
-
       if (entry.weight && current.entries.length === 0) {
         current.startWeight = entry.weight
       }
-
-      const newData = { ...current, entries }
-      await put(BLOB_KEY, JSON.stringify(newData), { access: 'private', addRandomSuffix: false })
+      await saveData({ ...current, entries })
       return NextResponse.json({ success: true })
     }
 
     if (body.action === 'deleteEntry') {
       const entries = current.entries.filter(e => e.date !== body.date)
-      const newData = { ...current, entries }
-      await put(BLOB_KEY, JSON.stringify(newData), { access: 'private', addRandomSuffix: false })
+      await saveData({ ...current, entries })
       return NextResponse.json({ success: true })
     }
 
     if (body.action === 'setStartWeight') {
-      const newData = { ...current, startWeight: body.weight }
-      await put(BLOB_KEY, JSON.stringify(newData), { access: 'private', addRandomSuffix: false })
+      await saveData({ ...current, startWeight: body.weight })
       return NextResponse.json({ success: true })
     }
 
