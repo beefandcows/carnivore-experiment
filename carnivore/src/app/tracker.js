@@ -3,7 +3,7 @@
 import { useState, useEffect } from ‘react’
 
 const START_DATE = new Date(‘2026-04-02T00:00:00’)
-const START_WEIGHT = 251.3
+const START_WEIGHT = 251.4
 const TOTAL_DAYS = 30
 const ADMIN_PASSWORD = ‘carnivore30’
 
