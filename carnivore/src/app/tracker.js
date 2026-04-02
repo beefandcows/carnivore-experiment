@@ -59,6 +59,83 @@ function WeightChart({ entries }) {
   )
 }
 
+function ProteinChart({ entries }) {
+  const pts = [...entries].filter(e => e.protein).sort((a, b) => a.date.localeCompare(b.date))
+  if (!pts.length) return (
+    <div style={{ textAlign: 'center', color: '#999', padding: '24px', fontSize: '11px', letterSpacing: '2px' }}>NO DATA YET</div>
+  )
+  const W = 560, H = 120, P = { t: 12, r: 16, b: 28, l: 44 }
+  const cw = W - P.l - P.r, ch = H - P.t - P.b
+  const ps = pts.map(e => e.protein)
+  const minP = Math.floor(Math.min(...ps) - 10), maxP = Math.ceil(Math.max(...ps) + 10)
+  const x = day => P.l + ((day - 1) / (TOTAL_DAYS - 1)) * cw
+  const y = p => P.t + (1 - (p - minP) / (maxP - minP)) * ch
+  const line = pts.map((e, i) => `${i === 0 ? 'M' : 'L'} ${x(e.day)} ${y(e.protein)}`).join(' ')
+  const area = pts.length > 1 ? `${line} L ${x(pts[pts.length - 1].day)} ${H - P.b} L ${x(pts[0].day)} ${H - P.b} Z` : null
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+      <defs>
+        <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#c0392b" stopOpacity="0.1" />
+          <stop offset="100%" stopColor="#c0392b" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {[0, 0.5, 1].map(t => {
+        const yw = P.t + t * ch, pv = Math.round(maxP - t * (maxP - minP))
+        return <g key={t}>
+          <line x1={P.l} y1={yw} x2={W - P.r} y2={yw} stroke="#e8e8e8" strokeWidth="1" />
+          <text x={P.l - 6} y={yw + 4} textAnchor="end" fontSize="9" fill="#aaa" fontFamily="monospace">{pv}</text>
+        </g>
+      })}
+      {[1, 10, 20, 30].map(d => (
+        <text key={d} x={x(d)} y={H - 4} textAnchor="middle" fontSize="9" fill="#bbb" fontFamily="monospace">D{d}</text>
+      ))}
+      {area && <path d={area} fill="url(#pg)" />}
+      <path d={line} fill="none" stroke="#c0392b" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+      {pts.map(e => <circle key={e.day} cx={x(e.day)} cy={y(e.protein)} r="3" fill="#c0392b" />)}
+    </svg>
+  )
+}
+
+function RatioChart({ entries }) {
+  const pts = [...entries].filter(e => e.protein && e.calories).sort((a, b) => a.date.localeCompare(b.date))
+  pts.forEach(e => e.ratio = parseFloat((e.calories / e.protein).toFixed(1)))
+  if (!pts.length) return (
+    <div style={{ textAlign: 'center', color: '#999', padding: '24px', fontSize: '11px', letterSpacing: '2px' }}>NO DATA YET</div>
+  )
+  const W = 560, H = 120, P = { t: 12, r: 16, b: 28, l: 44 }
+  const cw = W - P.l - P.r, ch = H - P.t - P.b
+  const rs = pts.map(e => e.ratio)
+  const minR = Math.floor(Math.min(...rs) - 1), maxR = Math.ceil(Math.max(...rs) + 1)
+  const x = day => P.l + ((day - 1) / (TOTAL_DAYS - 1)) * cw
+  const y = r => P.t + (1 - (r - minR) / (maxR - minR)) * ch
+  const line = pts.map((e, i) => `${i === 0 ? 'M' : 'L'} ${x(e.day)} ${y(e.ratio)}`).join(' ')
+  const area = pts.length > 1 ? `${line} L ${x(pts[pts.length - 1].day)} ${H - P.b} L ${x(pts[0].day)} ${H - P.b} Z` : null
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+      <defs>
+        <linearGradient id="rg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#2980b9" stopOpacity="0.1" />
+          <stop offset="100%" stopColor="#2980b9" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {[0, 0.5, 1].map(t => {
+        const yw = P.t + t * ch, rv = (maxR - t * (maxR - minR)).toFixed(1)
+        return <g key={t}>
+          <line x1={P.l} y1={yw} x2={W - P.r} y2={yw} stroke="#e8e8e8" strokeWidth="1" />
+          <text x={P.l - 6} y={yw + 4} textAnchor="end" fontSize="9" fill="#aaa" fontFamily="monospace">{rv}</text>
+        </g>
+      })}
+      {[1, 10, 20, 30].map(d => (
+        <text key={d} x={x(d)} y={H - 4} textAnchor="middle" fontSize="9" fill="#bbb" fontFamily="monospace">D{d}</text>
+      ))}
+      {area && <path d={area} fill="url(#rg)" />}
+      <path d={line} fill="none" stroke="#2980b9" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+      {pts.map(e => <circle key={e.day} cx={x(e.day)} cy={y(e.ratio)} r="3" fill="#2980b9" />)}
+    </svg>
+  )
+}
+
 function ProgressGrid({ entries }) {
   const logged = new Set(entries.map(e => e.day))
   const today = Math.floor((new Date() - START_DATE) / 86400000) + 1
@@ -318,8 +395,13 @@ export default function CarnivoreTracker() {
 
       {/* CONTENT */}
       <div style={{ maxWidth: '860px', margin: '0 auto', padding: '20px 24px 60px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '8px' }}>
-          {[['AVG CALORIES', avgCal ? `${avgCal.toLocaleString()} kcal` : '—'], ['AVG PROTEIN', avgPro ? `${avgPro}g` : '—'], ['PROGRESS', `${data.entries.length}/${TOTAL_DAYS}`]].map(([label, val]) => (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '8px' }}>
+          {[
+            ['AVG CALORIES', avgCal ? `${avgCal.toLocaleString()} kcal` : '—'],
+            ['AVG PROTEIN', avgPro ? `${avgPro}g` : '—'],
+            ['AVG CAL:PRO', avgCal && avgPro ? `${(avgCal / avgPro).toFixed(1)}` : '—'],
+            ['PROGRESS', `${data.entries.length}/${TOTAL_DAYS}`],
+          ].map(([label, val]) => (
             <div key={label} style={card}>
               <div style={{ fontSize: '10px', letterSpacing: '2px', color: '#aaa', marginBottom: '4px' }}>{label}</div>
               <div style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a', fontFamily: 'monospace' }}>{val}</div>
@@ -330,6 +412,16 @@ export default function CarnivoreTracker() {
         <div style={{ ...card, marginBottom: '8px' }}>
           <div style={sh}>WEIGHT TREND (LBS)</div>
           <WeightChart entries={data.entries} />
+        </div>
+
+        <div style={{ ...card, marginBottom: '8px' }}>
+          <div style={sh}>PROTEIN TREND (G)</div>
+          <ProteinChart entries={data.entries} />
+        </div>
+
+        <div style={{ ...card, marginBottom: '8px' }}>
+          <div style={sh}>CAL:PROTEIN RATIO (KCAL/G) — LOWER IS BETTER</div>
+          <RatioChart entries={data.entries} />
         </div>
 
         <div style={{ ...card, marginBottom: '20px' }}>
